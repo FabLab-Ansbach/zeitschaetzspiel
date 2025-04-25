@@ -5,14 +5,15 @@ import json
 import os
 import threading
 import time
-import serial.tools.list_ports # Import hinzugefügt
+import serial.tools.list_ports  # Import hinzugefügt
+import pygame
 
 class TimeGuessGame:
     def __init__(self, root):
         self.root = root
         self.root.title("Zeit-Schätz-Spiel")
         self.root.geometry("800x600")
-        self.root.resizable(True, True) # Resizable aktiviert
+        self.root.resizable(True, True)  # Resizable aktiviert
 
         # Serielle Verbindung
         self.serial_port = None
@@ -28,15 +29,16 @@ class TimeGuessGame:
         self.load_leaderboard()
 
         # UI-Elemente
-        self.canvas_frame_id = None # Hinzugefügt: ID für das Canvas-Fenster
+        self.canvas_frame_id = None  # Hinzugefügt: ID für das Canvas-Fenster
         self.create_ui()
+
+        pygame.mixer.init()
 
         # Verbindung nicht automatisch beim Start herstellen
         # Serielle Kommunikation wird in setup_connection gestartet
 
         # Protokoll für das Schließen des Fensters
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
-
 
     def create_ui(self):
         # ... (Restlicher Code von create_ui bleibt gleich bis zum Ranglisten-Teil) ...
@@ -58,7 +60,7 @@ class TimeGuessGame:
         self.start_button = tk.Button(control_frame, text="Neues Spiel starten",
                                       command=self.start_new_game, font=("Arial", 14),
                                       bg="#4CAF50", fg="white", padx=10, pady=5,
-                                      state=tk.DISABLED) # Standardmäßig deaktiviert bis Verbindung steht
+                                      state=tk.DISABLED)  # Standardmäßig deaktiviert bis Verbindung steht
         self.start_button.pack(pady=10)
 
         # Frame für Spielinformationen
@@ -90,7 +92,7 @@ class TimeGuessGame:
         self.name_label.pack(side=tk.LEFT)
 
         self.name_entry = tk.Entry(name_frame, font=("Arial", 12), width=20)
-        self.name_entry.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True) # Nimmt verfügbaren Platz ein
+        self.name_entry.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)  # Nimmt verfügbaren Platz ein
 
         button_frame = tk.Frame(name_frame)
         button_frame.pack(side=tk.LEFT)
@@ -105,24 +107,24 @@ class TimeGuessGame:
                                      bg="#9E9E9E", fg="white")
         self.skip_button.pack(side=tk.LEFT, padx=5)
 
-
         # --- Frame für Rangliste (Container) ---
         leaderboard_outer_frame = tk.Frame(self.root, padx=10, pady=10)
-        leaderboard_outer_frame.pack(fill=tk.BOTH, expand=True) # Füllt restlichen Platz
+        leaderboard_outer_frame.pack(fill=tk.BOTH, expand=True)  # Füllt restlichen Platz
 
         tk.Label(leaderboard_outer_frame, text="Rangliste", font=("Arial", 16, "bold")).pack()
 
         # --- Canvas und Scrollbar für die Rangliste ---
         self.leaderboard_canvas = tk.Canvas(leaderboard_outer_frame)
-        self.leaderboard_scrollbar = tk.Scrollbar(leaderboard_outer_frame, orient=tk.VERTICAL, command=self.leaderboard_canvas.yview)
-        self.scrollable_leaderboard_frame = tk.Frame(self.leaderboard_canvas) # Frame *innerhalb* des Canvas
+        self.leaderboard_scrollbar = tk.Scrollbar(leaderboard_outer_frame, orient=tk.VERTICAL,
+                                                  command=self.leaderboard_canvas.yview)
+        self.scrollable_leaderboard_frame = tk.Frame(self.leaderboard_canvas)  # Frame *innerhalb* des Canvas
 
         # --- Änderung 1: ID speichern und Bindung an Canvas ---
         # Das Frame in den Canvas einbetten und die ID speichern
         self.canvas_frame_id = self.leaderboard_canvas.create_window(
             (0, 0),
             window=self.scrollable_leaderboard_frame,
-            anchor="nw" # Wichtig: Anker oben links
+            anchor="nw"  # Wichtig: Anker oben links
         )
 
         # Konfigurations-Event an den *Canvas* binden, um die Breite des Frames anzupassen
@@ -145,12 +147,12 @@ class TimeGuessGame:
         file_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Datei", menu=file_menu)
         file_menu.add_command(label="Rangliste zurücksetzen", command=self.reset_leaderboard)
-        file_menu.add_command(label="Beenden", command=self.on_closing) # Geändert zu on_closing
+        file_menu.add_command(label="Beenden", command=self.on_closing)  # Geändert zu on_closing
 
         connection_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Verbindung", menu=connection_menu)
         connection_menu.add_command(label="Verbinden", command=self.setup_connection)
-        connection_menu.add_command(label="Trennen", command=self.disconnect_serial) # Trennen Option
+        connection_menu.add_command(label="Trennen", command=self.disconnect_serial)  # Trennen Option
 
     # --- Änderung 2: Neue Methode zum Anpassen der Frame-Breite ---
     def _on_canvas_configure(self, event):
@@ -163,7 +165,6 @@ class TimeGuessGame:
         self.leaderboard_canvas.configure(scrollregion=self.leaderboard_canvas.bbox("all"))
     # --- Ende Änderung 2 ---
 
-
     def update_leaderboard_display(self):
         # Bestehende Einträge im scrollbaren Frame löschen
         for widget in self.scrollable_leaderboard_frame.winfo_children():
@@ -171,20 +172,20 @@ class TimeGuessGame:
 
         # --- Spaltenkonfiguration mit Gewichten für dynamische Breite ---
         # Definieren Sie die relativen Breiten (Gewichte) der Spalten
-        column_weights = [1, 5, 3, 3, 3] # Name etwas breiter gemacht
+        column_weights = [1, 5, 3, 3, 3]  # Name etwas breiter gemacht
         headers = ["Rang", "Name", "Zielzeit (s)", "Gemessene Zeit (s)", "Abweichung (s)"]
 
         # Konfiguriere die Spalten im scrollable_leaderboard_frame, damit sie sich anpassen
         # Wichtig: Dies wirkt sich nur aus, wenn scrollable_leaderboard_frame
         #          die Breite hat, um die Gewichte anzuwenden (daher _on_canvas_configure)
         for i, weight in enumerate(column_weights):
-            self.scrollable_leaderboard_frame.columnconfigure(i, weight=weight, uniform='leaderboard') # 'uniform' kann helfen
+            self.scrollable_leaderboard_frame.columnconfigure(i, weight=weight, uniform='leaderboard')  # 'uniform' kann helfen
 
         # --- Kopfzeile erstellen mit grid ---
         for i, header in enumerate(headers):
             lbl = tk.Label(self.scrollable_leaderboard_frame, text=header,
-                           font=("Arial", 11, "bold"), relief=tk.RIDGE, padx=5, pady=2, bd=1) # Etwas kleiner, mit Rand
-            lbl.grid(row=0, column=i, sticky='nsew') # nsew füllt Zelle komplett
+                           font=("Arial", 11, "bold"), relief=tk.RIDGE, padx=5, pady=2, bd=1)  # Etwas kleiner, mit Rand
+            lbl.grid(row=0, column=i, sticky='nsew')  # nsew füllt Zelle komplett
 
         # --- Einträge in die Rangliste einfügen mit grid ---
         for i, entry in enumerate(self.leaderboard):
@@ -193,28 +194,33 @@ class TimeGuessGame:
             bg_color = "#f0f0f0" if i % 2 == 0 else "#ffffff"
 
             # Zellen erstellen und platzieren
-            data_font = ("Arial", 10) # Kleinere Schrift für Daten
+            data_font = ("Arial", 10)  # Kleinere Schrift für Daten
 
             # Rang
-            lbl_rank = tk.Label(self.scrollable_leaderboard_frame, text=str(i + 1), bg=bg_color, padx=5, pady=2, font=data_font)
+            lbl_rank = tk.Label(self.scrollable_leaderboard_frame, text=str(i + 1), bg=bg_color, padx=5, pady=2,
+                                font=data_font)
             lbl_rank.grid(row=row_num, column=0, sticky='nsew')
 
             # Name
-            lbl_name = tk.Label(self.scrollable_leaderboard_frame, text=entry['name'], bg=bg_color, anchor='w', padx=5, pady=2, font=data_font)
+            lbl_name = tk.Label(self.scrollable_leaderboard_frame, text=entry['name'], bg=bg_color, anchor='w', padx=5,
+                                pady=2, font=data_font)
             lbl_name.grid(row=row_num, column=1, sticky='nsew')
 
             # Zielzeit
-            lbl_target = tk.Label(self.scrollable_leaderboard_frame, text=f"{entry['target_time'] / 1000:.3f}", bg=bg_color, padx=5, pady=2, font=data_font)
+            lbl_target = tk.Label(self.scrollable_leaderboard_frame, text=f"{entry['target_time'] / 1000:.3f}",
+                                  bg=bg_color, padx=5, pady=2, font=data_font)
             lbl_target.grid(row=row_num, column=2, sticky='nsew')
 
             # Gemessene Zeit
-            lbl_elapsed = tk.Label(self.scrollable_leaderboard_frame, text=f"{entry['elapsed_time'] / 1000:.3f}", bg=bg_color, padx=5, pady=2, font=data_font)
+            lbl_elapsed = tk.Label(self.scrollable_leaderboard_frame, text=f"{entry['elapsed_time'] / 1000:.3f}",
+                                   bg=bg_color, padx=5, pady=2, font=data_font)
             lbl_elapsed.grid(row=row_num, column=3, sticky='nsew')
 
             # Abweichung
             deviation = abs(entry['deviation'] / 1000)
             color = "green" if deviation < 0.5 else "orange" if deviation < 1.0 else "red"
-            lbl_dev = tk.Label(self.scrollable_leaderboard_frame, text=f"{deviation:.3f}", fg=color, bg=bg_color, padx=5, pady=2, font=data_font)
+            lbl_dev = tk.Label(self.scrollable_leaderboard_frame, text=f"{deviation:.3f}", fg=color, bg=bg_color,
+                                padx=5, pady=2, font=data_font)
             lbl_dev.grid(row=row_num, column=4, sticky='nsew')
 
         # Wichtig: Nach dem Hinzufügen von Widgets und Konfigurieren der Spalten
@@ -224,12 +230,11 @@ class TimeGuessGame:
         self.scrollable_leaderboard_frame.update_idletasks()
         self.leaderboard_canvas.configure(scrollregion=self.leaderboard_canvas.bbox("all"))
 
-
     # ... (Rest der Methoden: setup_connection, check_initial_connection, etc. bleiben unverändert) ...
     def setup_connection(self):
         if self.connected:
-             messagebox.showinfo("Info", "Bereits verbunden.")
-             return
+            messagebox.showinfo("Info", "Bereits verbunden.")
+            return
 
         try:
             ports = list(serial.tools.list_ports.comports())
@@ -238,7 +243,7 @@ class TimeGuessGame:
                 return
 
             port_names = [p.device for p in ports]
-            port_info = [f"{p.device} - {p.description}" for p in ports] # Mehr Infos anzeigen
+            port_info = [f"{p.device} - {p.description}" for p in ports]  # Mehr Infos anzeigen
 
             if len(ports) == 1:
                 selected_port_device = ports[0].device
@@ -249,12 +254,12 @@ class TimeGuessGame:
                                                        f"Verfügbare Ports:\n" + "\n".join(port_info) + "\n\nBitte Port eingeben (z.B. COM3 oder /dev/ttyACM0):",
                                                        parent=self.root)
                 if not selected_port_str:
-                    return # Benutzer hat abgebrochen
+                    return  # Benutzer hat abgebrochen
 
                 # Prüfen, ob der eingegebene Port gültig ist
                 if selected_port_str not in port_names:
-                     messagebox.showerror("Fehler", f"Ungültiger Port: {selected_port_str}")
-                     return
+                    messagebox.showerror("Fehler", f"Ungültiger Port: {selected_port_str}")
+                    return
                 selected_port_device = selected_port_str
 
             # Verbindung herstellen
@@ -262,13 +267,13 @@ class TimeGuessGame:
                 self.serial_port.close()
 
             self.serial_port = serial.Serial(selected_port_device, 9600, timeout=0.1)
-            self.root.after(2000, self.check_initial_connection) # Warte 2s und prüfe Verbindung
+            self.root.after(2000, self.check_initial_connection)  # Warte 2s und prüfe Verbindung
 
         except serial.SerialException as e:
-             messagebox.showerror("Verbindungsfehler", f"Konnte Port {selected_port_device} nicht öffnen:\n{e}")
-             self.connected = False
-             self.connection_label.config(text="Nicht verbunden", fg="red")
-             self.start_button.config(state=tk.DISABLED)
+            messagebox.showerror("Verbindungsfehler", f"Konnte Port {selected_port_device} nicht öffnen:\n{e}")
+            self.connected = False
+            self.connection_label.config(text="Nicht verbunden", fg="red")
+            self.start_button.config(state=tk.DISABLED)
         except Exception as e:
             messagebox.showerror("Verbindungsfehler", str(e))
             self.connected = False
@@ -280,41 +285,40 @@ class TimeGuessGame:
         # (Optional: Sende einen PING oder erwarte eine READY Nachricht)
         try:
             if self.serial_port and self.serial_port.is_open:
-                 # Optional: Warte auf eine "READY" Nachricht vom Arduino
-                 # self.serial_port.write(b"CHECK_READY\n") # Beispielbefehl
-                 # Oder gehe einfach davon aus, dass es geklappt hat
-                 self.connected = True
-                 self.connection_label.config(text=f"Verbunden mit {self.serial_port.port}", fg="green")
-                 self.start_button.config(state=tk.NORMAL)
-                 self.instruction_label.config(text="Drücke 'Neues Spiel starten' oder den Taster") # Aktualisiert
+                # Optional: Warte auf eine "READY" Nachricht vom Arduino
+                # self.serial_port.write(b"CHECK_READY\n") # Beispielbefehl
+                # Oder gehe einfach davon aus, dass es geklappt hat
+                self.connected = True
+                self.connection_label.config(text=f"Verbunden mit {self.serial_port.port}", fg="green")
+                self.start_button.config(state=tk.NORMAL)
+                self.instruction_label.config(text="Drücke 'Neues Spiel starten' oder den Taster")  # Aktualisiert
 
-                 # Starte den Lese-Thread erst *nach* erfolgreicher Verbindung
-                 if self.serial_thread is None or not self.serial_thread.is_alive():
-                     self.serial_thread = threading.Thread(target=self.read_serial, daemon=True)
-                     self.serial_thread.start()
+                # Starte den Lese-Thread erst *nach* erfolgreicher Verbindung
+                if self.serial_thread is None or not self.serial_thread.is_alive():
+                    self.serial_thread = threading.Thread(target=self.read_serial, daemon=True)
+                    self.serial_thread.start()
 
-                 messagebox.showinfo("Verbindung", f"Erfolgreich mit {self.serial_port.port} verbunden!")
+                messagebox.showinfo("Verbindung", f"Erfolgreich mit {self.serial_port.port} verbunden!")
 
             else:
-                 # Dieser Fall sollte eigentlich nicht eintreten, wenn Serial() erfolgreich war
-                 raise serial.SerialException("Port nicht mehr offen nach Wartezeit.")
+                # Dieser Fall sollte eigentlich nicht eintreten, wenn Serial() erfolgreich war
+                raise serial.SerialException("Port nicht mehr offen nach Wartezeit.")
 
         except Exception as e:
-             port_name = self.serial_port.port if self.serial_port else "Unbekannt"
-             messagebox.showerror("Verbindungsfehler", f"Keine Antwort vom Arduino auf {port_name}:\n{e}")
-             self.disconnect_serial() # Verbindung sauber trennen
-
+            port_name = self.serial_port.port if self.serial_port else "Unbekannt"
+            messagebox.showerror("Verbindungsfehler", f"Keine Antwort vom Arduino auf {port_name}:\n{e}")
+            self.disconnect_serial()  # Verbindung sauber trennen
 
     def disconnect_serial(self):
         """Trennt die serielle Verbindung sauber."""
-        self.game_active = False # Spiel stoppen, falls aktiv
+        self.game_active = False  # Spiel stoppen, falls aktiv
         if self.serial_port and self.serial_port.is_open:
             try:
                 self.serial_port.close()
             except Exception as e:
                 print(f"Fehler beim Schließen des Ports: {e}")
         self.serial_port = None
-        self.connected = False # Wichtig: Setze connected auf False
+        self.connected = False  # Wichtig: Setze connected auf False
         # UI Updates im Hauptthread sicherstellen
         self.root.after(0, self._update_ui_disconnected)
         print("Serielle Verbindung getrennt.")
@@ -342,7 +346,7 @@ class TimeGuessGame:
             # Starte ein neues Spiel
             print("Sende START_GAME an Arduino")
             self.serial_port.write(b"START_GAME\n")
-            self.serial_port.flush() # Sicherstellen, dass Daten gesendet werden
+            self.serial_port.flush()  # Sicherstellen, dass Daten gesendet werden
             self.game_active = True
 
             # UI zurücksetzen
@@ -351,7 +355,7 @@ class TimeGuessGame:
             self.deviation_label.config(text="Abweichung: -")
             self.status_label.config(text="Spiel wird vorbereitet...")
             self.instruction_label.config(text="Warte auf Spielstart...")
-            self.deviation_label.config(fg="black") # Farbe zurücksetzen
+            self.deviation_label.config(fg="black")  # Farbe zurücksetzen
 
             # Deaktiviere Start-Button während des Spiels
             self.start_button.config(state=tk.DISABLED)
@@ -362,8 +366,9 @@ class TimeGuessGame:
             self.name_entry.delete(0, tk.END)
 
         except serial.SerialException as e:
-            messagebox.showerror("Kommunikationsfehler", f"Fehler beim Senden an Arduino:\n{e}\nVerbindung wird getrennt.", parent=self.root)
-            self.disconnect_serial() # Bei Sendefehler Verbindung trennen
+            messagebox.showerror("Kommunikationsfehler",
+                                 f"Fehler beim Senden an Arduino:\n{e}\nVerbindung wird getrennt.", parent=self.root)
+            self.disconnect_serial()  # Bei Sendefehler Verbindung trennen
         except Exception as e:
             messagebox.showerror("Fehler", f"Fehler beim Starten des Spiels: {e}", parent=self.root)
             self.game_active = False
@@ -371,11 +376,10 @@ class TimeGuessGame:
             if self.connected:
                 self.start_button.config(state=tk.NORMAL)
 
-
     def read_serial(self):
         print("Serial Read-Thread gestartet.")
         buffer = ""
-        while self.connected: # Schleife läuft nur solange connected=True
+        while self.connected:  # Schleife läuft nur solange connected=True
             if self.serial_port and self.serial_port.is_open:
                 try:
                     # Daten lesen, wenn verfügbar
@@ -387,7 +391,7 @@ class TimeGuessGame:
                         # Verarbeite vollständige Zeilen im Puffer
                         while '\n' in buffer:
                             line, buffer = buffer.split('\n', 1)
-                            line = line.strip() # Entferne Leerzeichen und ggf. \r
+                            line = line.strip()  # Entferne Leerzeichen und ggf. \r
                             if line:
                                 print(f"Arduino: {line}")  # Debug-Ausgabe
                                 # Stelle sicher, dass UI-Updates im Hauptthread laufen
@@ -397,32 +401,30 @@ class TimeGuessGame:
                     print(f"Serieller Fehler im Lesethread: {e}")
                     # Bei Lesefehler Verbindung als verloren markieren
                     # Stelle sicher, dass dies im Hauptthread passiert
-                    if self.connected: # Nur wenn wir dachten, wir wären verbunden
-                         self.root.after(0, self.handle_connection_loss)
-                    break # Thread beenden
+                    if self.connected:  # Nur wenn wir dachten, wir wären verbunden
+                        self.root.after(0, self.handle_connection_loss)
+                    break  # Thread beenden
                 except Exception as e:
                     # Verhindert Absturz bei unerwarteten Dekodierungsfehlern etc.
                     print(f"Allgemeiner Fehler im Lesethread: {e}")
                     # Optional: Hier auch Verbindung trennen?
-                    time.sleep(0.1) # Kurze Pause bei unerwartetem Fehler
+                    time.sleep(0.1)  # Kurze Pause bei unerwartetem Fehler
             else:
-                 # Wenn Port nicht mehr offen ist oder None, Thread beenden
-                 print("Port nicht mehr offen oder nicht vorhanden. Read-Thread wird beendet.")
-                 break # Beendet die while self.connected Schleife
+                # Wenn Port nicht mehr offen ist oder None, Thread beenden
+                print("Port nicht mehr offen oder nicht vorhanden. Read-Thread wird beendet.")
+                break  # Beendet die while self.connected Schleife
 
-            time.sleep(0.05) # Kurze Pause, um CPU zu schonen
+            time.sleep(0.05)  # Kurze Pause, um CPU zu schonen
 
         print("Serial Read-Thread beendet.")
 
-
     def handle_connection_loss(self):
         """Wird aufgerufen, wenn ein serieller Fehler auftritt (im Hauptthread)."""
-        if self.connected: # Nur handeln, wenn wir dachten, wir wären verbunden
-             # Verhindert mehrere Fehlermeldungen bei schnellen Fehlern
-             self.connected = False # Sofort auf False setzen
-             messagebox.showerror("Verbindungsfehler", "Verbindung zum Arduino verloren!", parent=self.root)
-             self.disconnect_serial() # Ruft UI-Updates etc. auf
-
+        if self.connected:  # Nur handeln, wenn wir dachten, wir wären verbunden
+            # Verhindert mehrere Fehlermeldungen bei schnellen Fehlern
+            self.connected = False  # Sofort auf False setzen
+            messagebox.showerror("Verbindungsfehler", "Verbindung zum Arduino verloren!", parent=self.root)
+            self.disconnect_serial()  # Ruft UI-Updates etc. auf
 
     def process_arduino_message(self, message):
         # Diese Funktion wird jetzt über self.root.after() im Hauptthread aufgerufen
@@ -440,19 +442,22 @@ class TimeGuessGame:
                     'elapsed_time': 0,
                     'deviation': 0
                 }
-                self.target_time_label.config(text=f"Zielzeit: {target_time/1000:.1f} Sekunden")
-                self.status_label.config(text="Spiel läuft") # Status hier anpassen
-                self.instruction_label.config(text="Drücke Taster zum Starten...") # Erste Anweisung nach Zielzeit
+                self.target_time_label.config(text=f"Zielzeit: {target_time / 1000:.1f} Sekunden")
+                self.status_label.config(text="Spiel läuft")  # Status hier anpassen
+                self.instruction_label.config(text="Drücke Taster zum Starten...")  # Erste Anweisung nach Zielzeit
 
             elif message == "WAITING_FOR_BUTTON":
-                 self.instruction_label.config(
-                     text="Drücke den Taster zum Starten der Zeitmessung")
-                 self.status_label.config(text="Bereit zum Start") # Klarerer Status
+                self.instruction_label.config(
+                    text="Drücke den Taster zum Starten der Zeitmessung")
+                self.status_label.config(text="Bereit zum Start")  # Klarerer Status
 
             elif message == "TIME_STARTED":
+                startsound = pygame.mixer.Sound("start.mp3")
+                pygame.mixer.Sound.play(startsound)
+
                 self.status_label.config(text="Zeitmessung läuft...")
                 self.instruction_label.config(
-                    text="Drücke den Taster erneut zum Stoppen") # Verkürzt
+                    text="Drücke den Taster erneut zum Stoppen")  # Verkürzt
 
             elif message.startswith("ELAPSED_TIME:"):
                 # Nur verarbeiten, wenn ein Spiel aktiv ist
@@ -460,7 +465,7 @@ class TimeGuessGame:
                     elapsed_time = int(message.split(":")[1].strip())
                     self.current_game['elapsed_time'] = elapsed_time
                     self.elapsed_time_label.config(
-                        text=f"Deine Zeit: {elapsed_time/1000:.3f} Sekunden")
+                        text=f"Deine Zeit: {elapsed_time / 1000:.3f} Sekunden")
 
             elif message.startswith("DEVIATION:"):
                 # Nur verarbeiten, wenn ein Spiel aktiv ist
@@ -475,32 +480,40 @@ class TimeGuessGame:
                     color = "green" if deviation_abs_sec < 0.5 else "orange" if deviation_abs_sec < 1.0 else "red"
                     self.deviation_label.config(fg=color)
 
+                    if deviation_abs_sec >= 10:
+                        fail = pygame.mixer.Sound("fail.mp3")
+                        pygame.mixer.Sound.play(fail)
+                    elif deviation_abs_sec == 0:
+                        winner = pygame.mixer.Sound("winner.mp3")
+                        pygame.mixer.Sound.play(winner)
+                    else:
+                        fail = pygame.mixer.Sound("good.mp3")
+                        pygame.mixer.Sound.play(fail)
+
             elif message == "GAME_ENDED":
-                self.game_active = False # Wichtig: Spielstatus aktualisieren
+                self.game_active = False  # Wichtig: Spielstatus aktualisieren
                 self.status_label.config(text="Spiel beendet")
                 self.instruction_label.config(
-                    text="Trage Namen ein oder starte neu") # Verkürzt
-                if self.connected: # Nur aktivieren, wenn noch verbunden
-                     self.start_button.config(state=tk.NORMAL)
-                     self.submit_button.config(state=tk.NORMAL) # Buttons aktivieren
-                     self.skip_button.config(state=tk.NORMAL)
+                    text="Trage Namen ein oder starte neu")  # Verkürzt
+                if self.connected:  # Nur aktivieren, wenn noch verbunden
+                    self.start_button.config(state=tk.NORMAL)
+                    self.submit_button.config(state=tk.NORMAL)  # Buttons aktivieren
+                    self.skip_button.config(state=tk.NORMAL)
                 else:
-                     # Sicherstellen, dass Buttons deaktiviert bleiben, wenn keine Verbindung
-                     self.submit_button.config(state=tk.DISABLED)
-                     self.skip_button.config(state=tk.DISABLED)
+                    # Sicherstellen, dass Buttons deaktiviert bleiben, wenn keine Verbindung
+                    self.submit_button.config(state=tk.DISABLED)
+                    self.skip_button.config(state=tk.DISABLED)
 
-
-            elif message == "PC_READY": # Arduino meldet Bereitschaft nach Neustart/Init
-                 print("Arduino meldet PC_READY")
-                 # Wenn wir verbunden sind oder versuchen zu verbinden, UI aktualisieren
-                 if self.connected or (self.serial_port and self.serial_port.is_open):
-                     self.status_label.config(text="Arduino bereit")
-                     self.start_button.config(state=tk.NORMAL)
-                     self.instruction_label.config(text="Drücke 'Neues Spiel starten'")
-                 else:
-                     # Wenn keine Verbindung (mehr) besteht, nur loggen
-                     print("PC_READY empfangen, aber nicht verbunden.")
-
+            elif message == "PC_READY":  # Arduino meldet Bereitschaft nach Neustart/Init
+                print("Arduino meldet PC_READY")
+                # Wenn wir verbunden sind oder versuchen zu verbinden, UI aktualisieren
+                if self.connected or (self.serial_port and self.serial_port.is_open):
+                    self.status_label.config(text="Arduino bereit")
+                    self.start_button.config(state=tk.NORMAL)
+                    self.instruction_label.config(text="Drücke 'Neues Spiel starten'")
+                else:
+                    # Wenn keine Verbindung (mehr) besteht, nur loggen
+                    print("PC_READY empfangen, aber nicht verbunden.")
 
             # Handle andere unerwartete Nachrichten (optional)
             # else:
@@ -511,10 +524,9 @@ class TimeGuessGame:
         except IndexError as e:
             print(f"Fehler beim Splitten der Nachricht '{message}': {e}")
         except Exception as e:
-            # Catch-all für unerwartete Fehler während der Nachrichtenverarbeitung
             import traceback
-            print(f"Unerwarteter Fehler beim Verarbeiten der Nachricht '{message}': {e}")
-            traceback.print_exc() # Gibt detaillierten Traceback aus
+            traceback.print_exc()
+            print(f"Unerwarteter Fehler bei der Nachrichtenverarbeitung: {e}")
 
     def submit_score(self):
         name = self.name_entry.get().strip()
@@ -644,8 +656,7 @@ class TimeGuessGame:
         print("Tkinter-Fenster wird zerstört.")
         self.root.destroy() # Tkinter-Fenster zerstören
 
-
 if __name__ == "__main__":
     root = tk.Tk()
-    app = TimeGuessGame(root)
+    game = TimeGuessGame(root)
     root.mainloop()
