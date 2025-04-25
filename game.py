@@ -536,36 +536,62 @@ class TimeGuessGame:
 
         # Stelle sicher, dass Spieldaten vorhanden und gültig sind
         if self.current_game and 'target_time' in self.current_game and 'elapsed_time' in self.current_game and 'deviation' in self.current_game:
+            # Prüfen, ob der Name bereits in der Rangliste vorhanden ist
+            for i, entry in enumerate(self.leaderboard):
+                if entry['name'] == name:
+                    # Dialog anzeigen
+                    answer = messagebox.askquestion("Name bereits vorhanden",
+                                                    "Der Name ist bereits in der Rangliste vorhanden. Möchtest du ihn überschreiben?",
+                                                    icon='warning', parent=self.root)
+                    if answer == 'yes':
+                        # Eintrag überschreiben
+                        self.leaderboard[i] = {
+                            'name': name,
+                            'target_time': self.current_game['target_time'],
+                            'elapsed_time': self.current_game['elapsed_time'],
+                            'deviation': self.current_game['deviation']
+                        }
+                        self.leaderboard.sort(key=lambda x: abs(x['deviation']))
+                        self.save_leaderboard()
+                        self.update_leaderboard_display()
+
+                        # UI aktualisieren und Buttons deaktivieren
+                        self.name_entry.delete(0, tk.END)
+                        self.submit_button.config(state=tk.DISABLED)
+                        self.skip_button.config(state=tk.DISABLED)
+                        self.status_label.config(text="Bereit für ein neues Spiel")
+                        messagebox.showinfo("Rangliste", f"'{name}' wurde überschrieben!", parent=self.root)
+                        return
+                    else:
+                        # Speichern abbrechen
+                        return
+
+            # Wenn der Name nicht vorhanden ist, neuen Eintrag hinzufügen
             entry = {
                 'name': name,
                 'target_time': self.current_game['target_time'],
                 'elapsed_time': self.current_game['elapsed_time'],
                 'deviation': self.current_game['deviation']
             }
-
             self.leaderboard.append(entry)
-            self.leaderboard.sort(key=lambda x: abs(x['deviation'])) # Sortieren nach absoluter Abweichung
-
+            self.leaderboard.sort(key=lambda x: abs(x['deviation']))
             # Nur Top N behalten (optional)
             max_leaderboard_size = 20
             if len(self.leaderboard) > max_leaderboard_size:
                 self.leaderboard = self.leaderboard[:max_leaderboard_size]
-
             self.save_leaderboard()
-            self.update_leaderboard_display() # Rangliste aktualisieren
+            self.update_leaderboard_display()
 
-            # UI zurücksetzen für nächste Runde/Eingabe
+            # UI aktualisieren und Buttons deaktivieren
             self.name_entry.delete(0, tk.END)
-            self.submit_button.config(state=tk.DISABLED) # Deaktivieren bis nächstes Spielende
+            self.submit_button.config(state=tk.DISABLED)
             self.skip_button.config(state=tk.DISABLED)
-            self.status_label.config(text="Bereit für ein neues Spiel") # Status aktualisieren
-            # Alte Spielergebnisse bleiben sichtbar bis zum nächsten Spielstart
+            self.status_label.config(text="Bereit für ein neues Spiel")
             messagebox.showinfo("Rangliste", f"'{name}' zur Rangliste hinzugefügt!", parent=self.root)
         else:
             messagebox.showerror("Fehler", "Keine gültigen Spieldaten zum Speichern vorhanden.\nBitte zuerst ein Spiel beenden.", parent=self.root)
-            self.submit_button.config(state=tk.DISABLED) # Sicherstellen, dass Button deaktiviert ist
+            self.submit_button.config(state=tk.DISABLED)  # Sicherstellen, dass Button deaktiviert ist
             self.skip_button.config(state=tk.DISABLED)
-
     def skip_score(self):
         # UI zurücksetzen ohne Score zu speichern
         self.name_entry.delete(0, tk.END)
