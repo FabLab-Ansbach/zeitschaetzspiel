@@ -5,7 +5,7 @@ import json
 import os
 import threading
 import time
-import serial.tools.list_ports  # Import hinzugefügt
+import serial.tools.list_ports
 import pygame
 
 class TimeGuessGame:
@@ -13,7 +13,7 @@ class TimeGuessGame:
         self.root = root
         self.root.title("Zeit-Schätz-Spiel")
         self.root.geometry("800x600")
-        self.root.resizable(True, True)  # Resizable aktiviert
+        self.root.resizable(True, True)
 
         # Serielle Verbindung
         self.serial_port = None
@@ -29,7 +29,7 @@ class TimeGuessGame:
         self.load_leaderboard()
 
         # UI-Elemente
-        self.canvas_frame_id = None  # Hinzugefügt: ID für das Canvas-Fenster
+        self.canvas_frame_id = None
         self.create_ui()
 
         pygame.mixer.init()
@@ -452,8 +452,8 @@ class TimeGuessGame:
                 self.status_label.config(text="Bereit zum Start")  # Klarerer Status
 
             elif message == "TIME_STARTED":
-                startsound = pygame.mixer.Sound("start.mp3")
-                pygame.mixer.Sound.play(startsound)
+                startsound = pygame.mixer.Sound("start.mp3") # Start-Sound setzen
+                pygame.mixer.Sound.play(startsound) # Start-Sound abspielen
 
                 self.status_label.config(text="Zeitmessung läuft...")
                 self.instruction_label.config(
@@ -480,6 +480,7 @@ class TimeGuessGame:
                     color = "green" if deviation_abs_sec < 0.5 else "orange" if deviation_abs_sec < 1.0 else "red"
                     self.deviation_label.config(fg=color)
 
+                    # Sound-Ausgabe, je nach Zeitabweichung
                     if deviation_abs_sec >= 10:
                         fail = pygame.mixer.Sound("fail.mp3")
                         pygame.mixer.Sound.play(fail)
