@@ -452,7 +452,7 @@ class TimeGuessGame:
                 self.status_label.config(text="Bereit zum Start")  # Klarerer Status
 
             elif message == "TIME_STARTED":
-                startsound = pygame.mixer.Sound("start.mp3") # Start-Sound setzen
+                startsound = pygame.mixer.Sound("resources/audio/start.mp3") # Start-Sound setzen
                 pygame.mixer.Sound.play(startsound) # Start-Sound abspielen
 
                 self.status_label.config(text="Zeitmessung läuft...")
@@ -482,13 +482,13 @@ class TimeGuessGame:
 
                     # Sound-Ausgabe, je nach Zeitabweichung
                     if deviation_abs_sec >= 10:
-                        fail = pygame.mixer.Sound("fail.mp3")
+                        fail = pygame.mixer.Sound("resources/audio/fail.mp3")
                         pygame.mixer.Sound.play(fail)
                     elif deviation_abs_sec == 0:
-                        winner = pygame.mixer.Sound("winner.mp3")
+                        winner = pygame.mixer.Sound("resources/audio/winner.mp3")
                         pygame.mixer.Sound.play(winner)
                     else:
-                        fail = pygame.mixer.Sound("good.mp3")
+                        fail = pygame.mixer.Sound("resources/audio/good.mp3")
                         pygame.mixer.Sound.play(fail)
 
             elif message == "GAME_ENDED":
