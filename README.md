@@ -32,7 +32,7 @@ Der Arduino Sketch greift ausschließlich auf Systemfunktionen zu und benötigt 
 
 ``` BASH
 sudo apt update
-sudo apt install python3 python3-pip python3-tk python3-pygame
+sudo apt install python3 python3-pip python3-tk python3-pygame python3-serial
 git clone https://git.dorf.cloud/lukasdietz/Zeitschaetzspiel.git
 cd ../Zeitschaetzspiel
 ```
