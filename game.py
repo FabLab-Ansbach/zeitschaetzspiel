@@ -93,6 +93,7 @@ class TimeGuessGame:
 
         self.name_entry = tk.Entry(name_frame, font=("Arial", 12), width=20)
         self.name_entry.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)  # Nimmt verfügbaren Platz ein
+        self.name_entry.bind("<Return>", lambda event: self.submit_score())
 
         button_frame = tk.Frame(name_frame)
         button_frame.pack(side=tk.LEFT)
@@ -577,9 +578,9 @@ class TimeGuessGame:
             self.leaderboard.append(entry)
             self.leaderboard.sort(key=lambda x: abs(x['deviation']))
             # Nur Top N behalten (optional)
-            max_leaderboard_size = 20
-            if len(self.leaderboard) > max_leaderboard_size:
-                self.leaderboard = self.leaderboard[:max_leaderboard_size]
+            # max_leaderboard_size = 20
+            # if len(self.leaderboard) > max_leaderboard_size:
+            #    self.leaderboard = self.leaderboard[:max_leaderboard_size]
             self.save_leaderboard()
             self.update_leaderboard_display()
 
