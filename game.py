@@ -173,8 +173,8 @@ class TimeGuessGame:
 
         # --- Spaltenkonfiguration mit Gewichten für dynamische Breite ---
         # Definieren Sie die relativen Breiten (Gewichte) der Spalten
-        column_weights = [1, 5, 3, 3, 3]  # Name etwas breiter gemacht
-        headers = ["Rang", "Name", "Zielzeit (s)", "Gemessene Zeit (s)", "Abweichung (s)"]
+        column_weights = [1, 5, 3, 3, 3, 3]  # Name etwas breiter gemacht
+        headers = ["Rang", "Name", "Zielzeit (s)", "Gemessene Zeit (s)", "Abweichung (s)", "Abweichung (%)"]
 
         # Konfiguriere die Spalten im scrollable_leaderboard_frame, damit sie sich anpassen
         # Wichtig: Dies wirkt sich nur aus, wenn scrollable_leaderboard_frame
@@ -189,7 +189,10 @@ class TimeGuessGame:
             lbl.grid(row=0, column=i, sticky='nsew')  # nsew füllt Zelle komplett
 
         # --- Einträge in die Rangliste einfügen mit grid ---
-        for i, entry in enumerate(self.leaderboard):
+        # Sortiere die Rangliste nach relativer Abweichung (aufsteigend)
+        sorted_leaderboard = sorted(self.leaderboard, key=lambda x: (abs(x['deviation']) / x['target_time']) * 100 if x['target_time'] else float('inf'))
+
+        for i, entry in enumerate(sorted_leaderboard):
             row_num = i + 1
 
             bg_color = "#f0f0f0" if i % 2 == 0 else "#ffffff"
@@ -223,6 +226,12 @@ class TimeGuessGame:
             lbl_dev = tk.Label(self.scrollable_leaderboard_frame, text=f"{deviation:.3f}", fg=color, bg=bg_color,
                                 padx=5, pady=2, font=data_font)
             lbl_dev.grid(row=row_num, column=4, sticky='nsew')
+
+            # Relative Abweichung in Prozent
+            relative_deviation = (abs(entry['deviation']) / entry['target_time']) * 100 if entry['target_time'] else 0
+            lbl_rel_dev = tk.Label(self.scrollable_leaderboard_frame, text=f"{relative_deviation:.2f}%", bg=bg_color,
+                                    padx=5, pady=2, font=data_font)
+            lbl_rel_dev.grid(row=row_num, column=5, sticky='nsew')
 
         # Wichtig: Nach dem Hinzufügen von Widgets und Konfigurieren der Spalten
         # muss der Canvas möglicherweise seine Scrollregion neu berechnen.
