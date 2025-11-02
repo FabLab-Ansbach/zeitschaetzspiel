@@ -483,6 +483,15 @@ class TimeGuessGame:
                     deviation = int(message.split(":")[1].strip())
                     self.current_game['deviation'] = deviation
                     deviation_abs_sec = abs(deviation) / 1000
+
+                # Relative Abweichung in Prozent berechnen
+                target_time = self.current_game['target_time']
+                if target_time > 0:
+                    deviation_percent = (abs(deviation) / target_time) * 100
+                    self.deviation_label.config(
+                        text=f"Abweichung: {deviation_abs_sec:.3f} Sekunden ({deviation_percent:.1f}%)")
+                else:
+                    # Fallback, falls target_time 0 ist
                     self.deviation_label.config(
                         text=f"Abweichung: {deviation_abs_sec:.3f} Sekunden")
 
