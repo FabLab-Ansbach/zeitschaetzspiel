@@ -1,0 +1,14 @@
+{
+  "comment": "Nur für `npm run check`: transpiliert den Selbsttest nach .check/, weil Node hier kein --experimental-strip-types kann.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "rootDir": "src",
+    "outDir": ".check"
+  },
+  "files": ["src/leaderboard.check.ts"]
+}
